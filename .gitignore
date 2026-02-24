@@ -1,1 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# Environment variables
 .env
+.env.*
+
+# Django stuff
+db.sqlite3
+*.log
+media/
+staticfiles/
+
+# Django migrations cache
+*.mo
+*.pot
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Coverage / testing
+htmlcov/
+.coverage
+coverage.xml
+pytest_cache/
+
+# Build files
+dist/
+build/
+*.egg-info/
