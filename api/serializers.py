@@ -1,6 +1,6 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from .models import Task
+from .models import Task,UploadedFile
 
 
 
@@ -24,4 +24,17 @@ class TaskSerializer(serializers.ModelSerializer):
         model  = Task
         fields = ['id', 'title', 'description', 'completed', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+# ─── File Serializer ──────────────────────────────────────────────────────────
+
+class UploadedFileSerializer(serializers.ModelSerializer):
+    download_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model  = UploadedFile
+        fields = ['id', 'original_name', 'file_size', 'uploaded_at', 'download_url']
+
+    def get_download_url(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(f'/api/files/{obj.id}/download/')
 

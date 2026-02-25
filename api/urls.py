@@ -14,4 +14,9 @@ urlpatterns = [
     # ── Task CRUD endpoints ───────────────────────────────────────────────────
     path('tasks/',      views.TaskListCreateView.as_view(), name='task-list'),
     path('tasks/<int:pk>/', views.TaskDetailView.as_view(), name='task-detail'),
+
+    # ── File endpoints ────────────────────────────────────────────────────────
+    path('files/',                       views.FileUploadView.as_view(),   name='file-list'),
+    path('files/<int:pk>/download/',     views.FileDownloadView.as_view(), name='file-download'),
+    path('files/<int:pk>/',              views.FileDeleteView.as_view(),   name='file-delete'),
 ]

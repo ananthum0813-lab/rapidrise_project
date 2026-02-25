@@ -1,15 +1,16 @@
 from django.shortcuts import render
 import os
 from django.conf import settings
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Task
+from .models import Task,UploadedFile
 from .serializers import RegisterSerializer
-from .serializers import TaskSerializer
+from .serializers import TaskSerializer,UploadedFileSerializer
 # Create your views here.
 
 
@@ -127,3 +128,79 @@ class TaskDetailView(APIView):
         task = self.get_task(pk, request.user)
         task.delete()
         return Response({'message': 'Task deleted'}, status=status.HTTP_204_NO_CONTENT)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 3. FILE UPLOAD & DOWNLOAD API
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class FileUploadView(APIView):
+    """
+    GET  /api/files/        — List all files uploaded by the user.
+    POST /api/files/        — Upload a new file.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        files = UploadedFile.objects.filter(user=request.user)
+        serializer = UploadedFileSerializer(files, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def post(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate file size
+        if file.size > settings.MAX_UPLOAD_SIZE:
+            return Response(
+                {'error': f'File too large. Max size is {settings.MAX_UPLOAD_SIZE // (1024*1024)}MB'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate file type
+        if file.content_type not in settings.ALLOWED_FILE_TYPES:
+            return Response(
+                {'error': f'File type not allowed. Allowed: {settings.ALLOWED_FILE_TYPES}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        uploaded = UploadedFile.objects.create(
+            user=request.user,
+            file=file,
+            original_name=file.name,
+            file_size=file.size,
+        )
+        serializer = UploadedFileSerializer(uploaded, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class FileDownloadView(APIView):
+    """GET /api/files/<id>/download/  — Download a file."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        uploaded_file = get_object_or_404(UploadedFile, pk=pk, user=request.user)
+        file_path = uploaded_file.file.path
+
+        if not os.path.exists(file_path):
+            return Response({'error': 'File not found on server'}, status=status.HTTP_404_NOT_FOUND)
+
+        response = FileResponse(open(file_path, 'rb'))
+        response['Content-Disposition'] = f'attachment; filename="{uploaded_file.original_name}"'
+        return response
+
+
+class FileDeleteView(APIView):
+    """DELETE /api/files/<id>/  — Delete a file."""
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, pk):
+        uploaded_file = get_object_or_404(UploadedFile, pk=pk, user=request.user)
+
+        # Delete the actual file from disk
+        if os.path.exists(uploaded_file.file.path):
+            os.remove(uploaded_file.file.path)
+
+        uploaded_file.delete()
+        return Response({'message': 'File deleted'}, status=status.HTTP_204_NO_CONTENT)
