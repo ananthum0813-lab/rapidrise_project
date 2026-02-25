@@ -10,4 +10,8 @@ urlpatterns = [
     path('auth/logout/',   views.LogoutView.as_view(),    name='logout'),
     path('auth/refresh/',  TokenRefreshView.as_view(),    name='token_refresh'),
     # ^ SimpleJWT's built-in refresh view (POST with {"refresh": "<token>"})
+
+    # ── Task CRUD endpoints ───────────────────────────────────────────────────
+    path('tasks/',      views.TaskListCreateView.as_view(), name='task-list'),
+    path('tasks/<int:pk>/', views.TaskDetailView.as_view(), name='task-detail'),
 ]
